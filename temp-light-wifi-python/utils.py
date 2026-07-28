@@ -24,3 +24,17 @@ def get_env_variable(key: str, environment: dict):
         return environment[key]
     else:
         raise KeyError(f"Environment variable '{key}' not found.")
+
+
+def get_url_with_params(base_url: str, params: dict) -> str:
+    """
+    Construct a URL with query parameters.
+
+    :param base_url: The base URL.
+    :param params: A dictionary of query parameters.
+    :return: The constructed URL with query parameters.
+    """
+    if not params or params == {}:
+        return base_url
+    query_string = "&".join(f"{key}={value}" for key, value in params.items())
+    return f"{base_url}?{query_string}"
