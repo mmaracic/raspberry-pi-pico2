@@ -1,9 +1,10 @@
-import logging
 import time
 
 import network
 
-logger = logging.getLogger(__name__)
+import custom_logging
+
+logger = custom_logging.getLogger(__name__)
 
 
 class NetworkClient:

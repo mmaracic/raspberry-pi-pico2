@@ -1,16 +1,16 @@
 import json
-import logging
 
 import machine
 import urequests
 from machine import Pin
 from utime import sleep
 
+import custom_logging
 from network_client import NetworkClient
 from utils import get_env_variable, get_url_with_params, load_json_file
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+custom_logging.basicConfig(level=custom_logging.INFO)
+logger = custom_logging.getLogger(__name__)
 
 env = load_json_file("local_settings.json")
 NETWORK_SSID = get_env_variable("NETWORK_SSID", env)
