@@ -1,6 +1,6 @@
 # README
 
-MicroPython project to load environemnt variables from a JSON file and connect to a Wi-Fi network using those variables, measure temperature and light levels using ADC, and send the data to a server using HTTP requests with Json payload. The project is designed to run on a Raspberry Pi Pico W microcontroller.
+MicroPython project to load environment variables from a JSON file and connect to a Wi-Fi network using those variables, measure temperature and light levels using ADC, and send the data to a server using HTTP requests with Json payload. The project is designed to run on a Raspberry Pi Pico2 W microcontroller.
 
 
 ## Setup
@@ -19,11 +19,14 @@ For the project to work, you need to create a `local_settings.json` file in the 
     "SAMPLE_INTERVAL_SEC": 60
 }
 ```
-All three files `network.py`, `utils.py`, and `local_settings.json` are required for the project to work and need to be uploaded to the Pico.
 
-The `network.py` file contains the code to connect to the Wi-Fi network, the `utils.py` file contains utility functions to load the JSON file and get environment variables, and the `local_settings.json` file contains the network credentials. Make sure to replace `your_network_ssid` and `your_network_password` with your actual Wi-Fi network credentials.
+Main project file is `temperature_light.py` which contains the main logic of the project. It imports the `network_client.py`, `utils.py` and `custom_logging.py` files to connect to the Wi-Fi network, load environment variables from the JSON file and implement logging respectively.  
 
-When importing other source files it is not possible to use relative imports, so the import statements in `network.py` and `utils.py` should be modified to use absolute imports instead of relative imports. For example, instead of using `from .utils import load_json_file, get_env_variable`, you should use `from utils import load_json_file, get_env_variable`.
+All files  `network_client.py`, `utils.py`, `custom_logging.py`, and `local_settings.json` are required for the project to work and need to be uploaded to the Pico. `temperature_light.py` should be run on the Pico to start the project or uploaded as `main.py` to be run on Pico2 boot.
+
+The `network_client.py` file contains the code to connect to the Wi-Fi network, the `utils.py` file contains utility functions to load the JSON file and get environment variables, the `custom_logging.py` contains logging implementation and the `local_settings.json` file contains the network credentials. Make sure to replace `your_network_ssid` and `your_network_password` with your actual Wi-Fi network credentials.
+
+When importing other source files it is not possible to use relative imports, so the import statements in `network_client.py` and `temperature_light.py` should be modified to use absolute imports instead of relative imports. For example, instead of using `from .utils import load_json_file, get_env_variable`, you should use `from utils import load_json_file, get_env_variable`.
 
 ## Notes
 Pico wireless and bluetooth documentation:  
