@@ -24,6 +24,10 @@ https://github.com/micropython/micropython/tree/master/examples/bluetooth
 Example of pairing/bnonding:
 https://github.com/micropython/micropython/issues/8837
 
+Pairinig or bonding is not supported on Pico in firmware v 1.28.0 yet
+https://github.com/orgs/micropython/discussions/11793
+https://github.com/orgs/micropython/discussions/13612
+
 Sample for push notifications (not Pico though):
 https://hubble.com/community/guides/how-to-use-esp32-bluetooth-le-with-micropython-for-rapid-prototyping/
 
