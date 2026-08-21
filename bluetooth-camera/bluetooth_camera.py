@@ -12,11 +12,18 @@ sleep(1) # sleep 1sec
 pin.toggle()
 
 ble = bluetooth.BLE()
-sensor = BLESensor(ble, name="Pico Camera Sensor")
+camera = BLESensor(ble, name="Pico Camera")
 while True:
     try:
         pin.toggle()
-        sensor.update_value(value="Hello from Pico Camera!")
+        camera.update_row(
+            start_row=0,
+            start_col=0,
+            bytes_per_pixel=3,
+            total_row_bytes=640 * 3,
+            data=b"\x00" * 20,
+            notify=True,
+        )
         pin.toggle()
         sleep(5)
     except KeyboardInterrupt:

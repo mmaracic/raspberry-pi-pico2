@@ -33,21 +33,28 @@ _PASSKEY_ACTION_INPUT = const(2)
 _PASSKEY_ACTION_DISP = const(3)
 _PASSKEY_ACTION_NUMCMP = const(4)
 
-# org.bluetooth.service.environmental_sensing
-_ENV_SENSE_UUID = bluetooth.UUID(0x181A)
+# Custom service/characteristic with random UUID for streaming camera row data.
+_CAMERA_SERVICE_UUID = bluetooth.UUID("ba6a8c7b-a79d-4e66-b91e-2fe9f9e962ec")
 
-# org.bluetooth.characteristic.temperature
-_TEMP_CHAR = (
-    bluetooth.UUID(0x2A6E),
-    _FLAG_READ | _FLAG_NOTIFY | _FLAG_INDICATE, # | _FLAG_READ_ENCRYPTED, Unsupported for now on Pico
+# Characteristic value layout: <HHBH> header (start_row, start_col, bytes_per_pixel,
+# total_row_bytes) followed by a data chunk, sized to fit the negotiated MTU; a chunk
+# may span into the next row, the client uses total_row_bytes to find the row boundary.
+_CAMERA_ROW_CHAR = (
+    bluetooth.UUID("b777e097-d4af-4a7f-a83b-302925b3e63c"),
+    _FLAG_READ | _FLAG_NOTIFY,
 )
-_ENV_SENSE_SERVICE = (
-    _ENV_SENSE_UUID,
-    (_TEMP_CHAR,),
+_CAMERA_SERVICE = (
+    _CAMERA_SERVICE_UUID,
+    (_CAMERA_ROW_CHAR,),
 )
 
-# org.bluetooth.characteristic.gap.appearance.xml
-_ADV_APPEARANCE_GENERIC_THERMOMETER = const(768)
+_CAMERA_ROW_HEADER_FORMAT = "<HHBH"  # little-endian: start_row, start_col, bytes_per_pixel, total_row_bytes
+# Only raw packed bytes go over BLE; the client must know this format independently to parse them.
+# Header definition is up to device designer, it doesnt have to exist if the client can interpret the data
+# without it. The header is just a convenient way to send metadata about the row data in one atomic read/notify.
+
+# org.bluetooth.characteristic.gap.appearance.xml (generic: unknown/no specific appearance)
+_ADV_APPEARANCE_GENERIC_CAMERA = const(0)
 
 
 class BLESensor:
@@ -61,13 +68,13 @@ class BLESensor:
 #        self._ble.config(mitm=True)
 #        self._ble.config(io=_IO_CAPABILITY_NO_INPUT_OUTPUT)
         self._ble.irq(self._irq)
-        ((self._handle,),) = self._ble.gatts_register_services((_ENV_SENSE_SERVICE,))
+        ((self._handle,),) = self._ble.gatts_register_services((_CAMERA_SERVICE,))
         self._connections = set()
         if len(name) == 0:
             name = 'Pico %s' % ubinascii.hexlify(self._ble.config('mac')[1],':').decode().upper()
         print('Sensor name %s' % name)
         self._payload = advertising_payload(
-            name=name, services=[_ENV_SENSE_UUID]
+            name=name, services=[_CAMERA_SERVICE_UUID]
         )
         self._advertise()
 
@@ -157,10 +164,37 @@ class BLESensor:
             print_exception(e)
             pass
 
-    def update_value(self, notify=False, indicate=False, value: str|None=None):
-        # Write the local value, ready for a central to read.
-        print("Advertising value: %s" % value);
-        self._ble.gatts_write(self._handle, struct.pack("<s", value))
+    def update_row(
+        self,
+        start_row: int,
+        start_col: int,
+        bytes_per_pixel: int,
+        total_row_bytes: int,
+        data: bytes,
+        notify=False,
+        indicate=False,
+    ):
+        """Write a chunk of camera data and optionally notify/indicate centrals.
+
+        The characteristic value packs start_row, start_col, bytes_per_pixel and
+        total_row_bytes into a single header ahead of the data chunk, so a central always
+        receives a consistent set of fields in one atomic read/notification. A chunk is not
+        required to stay within a single row; the client uses total_row_bytes to determine
+        where the current row ends and split the chunk into rows accordingly.
+
+        Args:
+            start_row: Row index of the first byte in this chunk, 0-based.
+            start_col: Column index of the first pixel in this chunk, 0-based.
+            bytes_per_pixel: Number of bytes used to encode each pixel (3 for RGB).
+            total_row_bytes: Total byte length of one row, used by the client to split chunks.
+            data: The chunk of data, sized to fit within the negotiated MTU.
+            notify: Whether to notify connected centrals after writing the value.
+            indicate: Whether to indicate connected centrals after writing the value.
+        """
+        header = struct.pack(_CAMERA_ROW_HEADER_FORMAT, start_row, start_col, bytes_per_pixel, total_row_bytes)
+        # Header format implies the header size, and the client has to know it in advance;
+        # the data length is the rest of the bytes in the characteristic value.
+        self._ble.gatts_write(self._handle, header + data)
         if notify or indicate:
             for conn_handle in self._connections:
                 if notify:
